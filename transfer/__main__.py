@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 # ----------------------------------------------------------------------------------------------------------------------
 IMAGE_BASE_DIR = '/Users/g6714/Data/fastai/dogscats'
 EPOCH_COUNT = 25
+WORKER_COUNT = 1
 
 log = logging.getLogger('transfer')
 log.setLevel(logging.DEBUG)
@@ -158,7 +159,7 @@ def train_model(device, dataloaders, dataset_sizes, model, criterion, optimizer,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def main(imgdir, epochs, visualize=False):
+def main(imgdir, epochs, workers, visualize=False):
     # Make sure that the libraries are set up correctly
     preflight_check()
 
@@ -181,7 +182,8 @@ def main(imgdir, epochs, visualize=False):
     log.info(f"class names: {class_names}")
 
     # Define the data loaders
-    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=16, shuffle=True, num_workers=4) for x in ['train', 'valid']}
+    log.info(f'Number of data loader workers: {workers}')
+    dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=16, shuffle=True, num_workers=workers) for x in ['train', 'valid']}
 
     # Visualize some data
     if visualize:
@@ -222,7 +224,8 @@ def main(imgdir, epochs, visualize=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a network with transfer learning')
     parser.add_argument('--image_dir', dest='imgdir', default=IMAGE_BASE_DIR, help='Location of image training data')
-    parser.add_argument('--epochs', dest='epochs', default=EPOCH_COUNT, help='sum the integers (default: find the max)')
+    parser.add_argument('--epochs', dest='epochs', default=EPOCH_COUNT, help='Number of epochs')
+    parser.add_argument('--workers', dest='workers', default=WORKER_COUNT, help='Number of workers')
     args = parser.parse_args()
 
-    main(args.imgdir, args.epochs, visualize=False)
+    main(args.imgdir, args.epochs, args.workers, visualize=False)
