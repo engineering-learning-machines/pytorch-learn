@@ -191,24 +191,32 @@ def main(imgdir, epochs, workers, visualize=False):
 
     # Load a pretrained model and configure all hyper parameters
     log.info('Load a pretrained resnet34 model...')
-    # model_ft = models.resnet18(pretrained=True)
-    model_ft = models.resnet34(pretrained=True)
-    num_ftrs = model_ft.fc.in_features
+    model_conv = models.resnet34(pretrained=True)
+
+    log.info('Freeze all existing layers')
+    for param in model_conv.parameters():
+        param.requires_grad = False
+
+    num_ftrs = model_conv.fc.in_features
     log.info(f'Final fully connected layer output: {num_ftrs}')
-    log.info(f'Append a customized final linear layer')
+    log.info(f'Append a customized final linear layer. Its parameters are not frozen by default.')
     model_output_features = 2
-    model_ft.fc = nn.Linear(num_ftrs, model_output_features)
     log.info(f'Model output features: {model_output_features}')
-    model_ft = model_ft.to(device)
+    # Connect
+    model_conv.fc = nn.Linear(num_ftrs, model_output_features)
+    log.info('Preload the model on GPU')
+    model_conv = model_conv.to(device)
     log.info(f'Define a cross-entropy loss function')
     criterion = nn.CrossEntropyLoss()
-    # Observe that all parameters are being optimized
+
+    # Optimizer
     log.info(f'Define a stochastic gradient descent optimizer with momentum')
     learning_rate = 0.001
     momentum = 0.9
     log.info(f'Learning rate: {learning_rate}')
     log.info(f'Momentum: {momentum}')
-    optimizer_ft = optim.SGD(model_ft.parameters(), lr=learning_rate, momentum=momentum)
+    # Note: Only the last layer parameters are getting optimized
+    optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=learning_rate, momentum=momentum)
     # Learning rate scheduler
     lr_decay_rate = 0.1
     lr_decay_interval = 7
@@ -216,10 +224,10 @@ def main(imgdir, epochs, workers, visualize=False):
     log.info(f'Learning rate decay rate: {lr_decay_rate}')
     log.info(f'Decay learning rate every {lr_decay_interval} epochs')
     # Decay LR by a factor of 0.1 every 7 epochs
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=lr_decay_interval, gamma=lr_decay_rate)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_conv, step_size=lr_decay_interval, gamma=lr_decay_rate)
 
     # Train the model
-    train_model(device, dataloaders, dataset_sizes, model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=epochs)
+    train_model(device, dataloaders, dataset_sizes, model_conv, criterion, optimizer_conv, exp_lr_scheduler, num_epochs=epochs)
 
 
 if __name__ == '__main__':
