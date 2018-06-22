@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # Project imports
 from .data import PascalDataset
 from .vis import show_grid
-
+from .transforms import Rescale
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Config
@@ -135,7 +135,16 @@ def main(imgdir, epochs, workers, visualize=False):
 
     # show_grid needs 12 items in the sample
     sample = [pascal_dataset[i] for i in range(12)]
-    show_grid(sample)
+    show_grid(sample, file_name='original.png')
+
+    # show some transformed images
+    composed = transforms.Compose([Rescale(256),
+                                   ])
+
+    rescaled_sample = [composed(s) for s in sample]
+    show_grid(rescaled_sample, file_name='rescaled.png')
+
+
 
 
     # Augmentation and Normalization

@@ -73,8 +73,7 @@ def show_ground_truth(ax, item):
     ax.axis('off')
 
 
-
-def show_grid(sample):
+def show_grid(sample, file_name='plot.png'):
     """
 
     :param sample: List of ImageItem objects
@@ -84,4 +83,4 @@ def show_grid(sample):
     for i, ax in enumerate(axes.flat):
         show_ground_truth(ax, sample[i])
     plt.tight_layout()
-    plt.savefig('plot.png')
+    plt.savefig(file_name)
