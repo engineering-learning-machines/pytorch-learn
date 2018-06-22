@@ -224,8 +224,8 @@ def main(imgdir, epochs, workers, visualize=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a network with transfer learning')
     parser.add_argument('--image_dir', dest='imgdir', default=IMAGE_BASE_DIR, help='Location of image training data')
-    parser.add_argument('--epochs', dest='epochs', default=EPOCH_COUNT, help='Number of epochs')
-    parser.add_argument('--workers', dest='workers', default=WORKER_COUNT, help='Number of workers')
+    parser.add_argument('--epochs', dest='epochs', type=int, default=EPOCH_COUNT, help='Number of epochs')
+    parser.add_argument('--workers', dest='workers', type=int, default=WORKER_COUNT, help='Number of workers')
     args = parser.parse_args()
 
     main(args.imgdir, args.epochs, args.workers, visualize=False)
