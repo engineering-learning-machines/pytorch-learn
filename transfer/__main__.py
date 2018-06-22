@@ -3,6 +3,7 @@ import sys
 import logging
 import time
 import copy
+import argparse
 #
 import numpy as np
 #
@@ -157,7 +158,7 @@ def train_model(device, dataloaders, dataset_sizes, model, criterion, optimizer,
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def main(visualize=False):
+def main(imgdir, epochs, visualize=False):
     # Make sure that the libraries are set up correctly
     preflight_check()
 
@@ -169,7 +170,8 @@ def main(visualize=False):
     aug_norm = aug_norm_transforms()
 
     # Load the data
-    image_datasets = {x: datasets.ImageFolder(os.path.join(IMAGE_BASE_DIR, x), aug_norm[x]) for x in ['train', 'valid']}
+    log.info(f'Basic image dir: {imgdir}')
+    image_datasets = {x: datasets.ImageFolder(os.path.join(imgdir, x), aug_norm[x]) for x in ['train', 'valid']}
 
     # Basic dataset info
     dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'valid']}
@@ -214,8 +216,13 @@ def main(visualize=False):
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=lr_decay_interval, gamma=lr_decay_rate)
 
     # Train the model
-    train_model(device, dataloaders, dataset_sizes, model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=EPOCH_COUNT)
+    train_model(device, dataloaders, dataset_sizes, model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=epochs)
 
 
 if __name__ == '__main__':
-    main(visualize=False)
+    parser = argparse.ArgumentParser(description='Train a network with transfer learning')
+    parser.add_argument('--image_dir', dest='imgdir', default=IMAGE_BASE_DIR, help='Location of image training data')
+    parser.add_argument('--epochs', dest='epochs', default=EPOCH_COUNT, help='sum the integers (default: find the max)')
+    args = parser.parse_args()
+
+    main(args.imgdir, args.epochs, visualize=False)
