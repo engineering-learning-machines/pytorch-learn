@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import torch
 
 
 class Rescale(object):
@@ -14,6 +15,17 @@ class Rescale(object):
     def __init__(self, target_size):
         assert isinstance(target_size, (int, tuple))
         self.target_size = target_size
+
+    @staticmethod
+    def transform_scene_object(matrix, scene_object):
+        """
+
+        :param matrix:
+        :param scene_object:
+        :return:
+        """
+        scene_object['bounding_box'] = np.dot(matrix, scene_object['bounding_box'])
+        return scene_object
 
     def __call__(self, item):
         # We need to transform both the image and the bounding boxes
@@ -42,7 +54,19 @@ class Rescale(object):
         matrix[2, 2] = width_factor
         matrix[3, 3] = height_factor
 
-        for scene_object in scene.objects:
-            scene_object.bounding_box = np.dot(matrix, scene_object.bounding_box)
-
+        # Transform all scene objects
+        scene['objects'] = [self.transform_scene_object(matrix, so) for so in scene['objects']]
         return {'image': resized_image, 'scene': scene}
+
+
+class ToTensor(object):
+    """Convert ndarrays in sample to Tensors."""
+
+    def __call__(self, item):
+        image, scene = item['image'], item['scene']
+
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        image = image.transpose((2, 0, 1))
+        return {'image': torch.from_numpy(image), 'scene': scene}

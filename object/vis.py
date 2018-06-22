@@ -63,9 +63,13 @@ def show_ground_truth(ax, item):
     scene = item['scene']
     ax = show_img(image, ax=ax)
 
-    for image_object in scene.objects:
-        category_name = image_object.category_name
-        bounding_box = image_object.bounding_box
+    # for scene_object in scene.objects:
+    for scene_object in scene['objects']:
+        # category_name = image_object.category_name
+        category_name = scene_object['category_name']
+        # bounding_box = image_object.bounding_box
+        bounding_box = scene_object['bounding_box']
+
         draw_rect(ax, bounding_box, color='white')
         # Draw the text in the top-left corner of the box
         draw_text(ax, bounding_box[:2], category_name, color='white')

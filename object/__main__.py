@@ -5,22 +5,14 @@ import time
 import copy
 import argparse
 #
-import numpy as np
-#
-# from __future__ import print_function, division
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
-import torchvision
-from torchvision import datasets, models, transforms
-#
-import matplotlib.pyplot as plt
+from torchvision import transforms
+from torch.utils.data import DataLoader
 
 # Project imports
 from .data import PascalDataset
 from .vis import show_grid
-from .transforms import Rescale
+from .transforms import Rescale, ToTensor
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Config
@@ -143,6 +135,15 @@ def main(imgdir, epochs, workers, visualize=False):
 
     rescaled_sample = [composed(s) for s in sample]
     show_grid(rescaled_sample, file_name='rescaled.png')
+
+    # The transformation ToTensor reshapes the image to be used by PyTorch
+    transformations = transforms.Compose([Rescale(224), ToTensor()])
+    transformed_dataset = PascalDataset(DATASET_ANNOTATION_JSON, IMAGE_ROOT_DIR, transform=transformations)
+    dataloader = DataLoader(transformed_dataset, batch_size=64, shuffle=True, num_workers=4)
+
+    for batch_id, batch in enumerate(dataloader):
+       print(batch_id, batch['image'].size(), batch['scene'])
+
 
 
 
