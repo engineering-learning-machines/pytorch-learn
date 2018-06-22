@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# from torch.optim import lr_scheduler
+from torch.optim import lr_scheduler
 import torchvision
 from torchvision import datasets, models, transforms
 #
@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 # Config
 # ----------------------------------------------------------------------------------------------------------------------
 IMAGE_BASE_DIR = '/Users/g6714/Data/fastai/dogscats'
+EPOCH_COUNT = 25
 
 log = logging.getLogger('transfer')
 log.setLevel(logging.DEBUG)
@@ -84,6 +85,73 @@ def visualize_training_data(dataloaders, class_names):
     imshow(out, title=[class_names[x] for x in classes])
     plt.show()
 
+
+def train_model(device, dataloaders, dataset_sizes, model, criterion, optimizer, scheduler, num_epochs=25):
+    since = time.time()
+
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_acc = 0.0
+
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 10)
+
+        # Each epoch has a training and validation phase
+        for phase in ['train', 'val']:
+            if phase == 'train':
+                scheduler.step()
+                model.train()  # Set model to training mode
+            else:
+                model.eval()   # Set model to evaluate mode
+
+            running_loss = 0.0
+            running_corrects = 0
+
+            # Iterate over data.
+            for inputs, labels in dataloaders[phase]:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+
+                # zero the parameter gradients
+                optimizer.zero_grad()
+
+                # forward
+                # track history if only in train
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
+                    loss = criterion(outputs, labels)
+
+                    # backward + optimize only if in training phase
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+
+                # statistics
+                running_loss += loss.item() * inputs.size(0)
+                running_corrects += torch.sum(preds == labels.data)
+
+            epoch_loss = running_loss / dataset_sizes[phase]
+            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                phase, epoch_loss, epoch_acc))
+
+            # deep copy the model
+            if phase == 'val' and epoch_acc > best_acc:
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+
+        print()
+
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(
+        time_elapsed // 60, time_elapsed % 60))
+    print('Best val Acc: {:4f}'.format(best_acc))
+
+    # load best model weights
+    model.load_state_dict(best_model_wts)
+    return model
 # ----------------------------------------------------------------------------------------------------------------------
 # Steps
 # ----------------------------------------------------------------------------------------------------------------------
@@ -117,6 +185,37 @@ def main(visualize=False):
     if visualize:
         visualize_training_data(dataloaders, class_names)
 
+    # Load a pretrained model and configure all hyper parameters
+    log.info('Load a pretrained resnet18 model...')
+    model_ft = models.resnet18(pretrained=True)
+    num_ftrs = model_ft.fc.in_features
+    log.info(f'Final fully connected layer output: {num_ftrs}')
+    log.info(f'Append a customized final linear layer')
+    model_output_features = 2
+    model_ft.fc = nn.Linear(num_ftrs, model_output_features)
+    log.info(f'Model output features: {model_output_features}')
+    model_ft = model_ft.to(device)
+    log.info(f'Define a cross-entropy loss function')
+    criterion = nn.CrossEntropyLoss()
+    # Observe that all parameters are being optimized
+    log.info(f'Define a stochastic gradient descent optimizer with momentum')
+    learning_rate = 0.001
+    momentum = 0.9
+    log.info(f'Learning rate: {learning_rate}')
+    log.info(f'Momentum: {momentum}')
+    optimizer_ft = optim.SGD(model_ft.parameters(), lr=learning_rate, momentum=momentum)
+    # Learning rate scheduler
+    lr_decay_rate = 0.1
+    lr_decay_interval = 7
+    log.info('Setting up a learning rate scheduler')
+    log.info(f'Learning rate decay rate: {lr_decay_rate}')
+    log.info(f'Decay learning rate every {lr_decay_interval} epochs')
+    # Decay LR by a factor of 0.1 every 7 epochs
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=lr_decay_interval, gamma=lr_decay_rate)
+
+    # Train the model
+    train_model(device, dataloaders, dataset_sizes, model_ft, criterion, optimizer_ft, exp_lr_scheduler, num_epochs=EPOCH_COUNT)
+
 
 if __name__ == '__main__':
-    main(visualize=True)
+    main(visualize=False)
