@@ -70,6 +70,8 @@ def show_ground_truth(ax, item):
         # Draw the text in the top-left corner of the box
         draw_text(ax, bounding_box[:2], category_name, color='white')
 
+    ax.axis('off')
+
 
 
 def show_grid(sample):
