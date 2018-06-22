@@ -137,6 +137,7 @@ def main(imgdir, epochs, workers, visualize=False):
     show_grid(rescaled_sample, file_name='rescaled.png')
 
     # The transformation ToTensor reshapes the image to be used by PyTorch
+    # TODO: Normalize(), Rotate(), Lighting(), Flip()
     transformations = transforms.Compose([Rescale(224), ToTensor()])
     transformed_dataset = PascalDataset(DATASET_ANNOTATION_JSON, IMAGE_ROOT_DIR, transform=transformations)
     dataloader = DataLoader(transformed_dataset, batch_size=64, shuffle=True, num_workers=4)

@@ -16,9 +16,9 @@ def show_img(im, fig_size=None, ax=None):
     if not ax:
         fig, ax = plt.subplots(figsize=fig_size)
     ax.imshow(im)
-    # ax.set_xticks(np.linspace(0, 224, 8))
-    # ax.set_yticks(np.linspace(0, 224, 8))
-    # ax.grid()
+    ax.set_xticks(np.linspace(0, 224, 8))
+    ax.set_yticks(np.linspace(0, 224, 8))
+    ax.grid()
     ax.set_yticklabels([])
     ax.set_xticklabels([])
     return ax
@@ -74,7 +74,7 @@ def show_ground_truth(ax, item):
         # Draw the text in the top-left corner of the box
         draw_text(ax, bounding_box[:2], category_name, color='white')
 
-    ax.axis('off')
+    # ax.axis('off')
 
 
 def show_grid(sample, file_name='plot.png'):
