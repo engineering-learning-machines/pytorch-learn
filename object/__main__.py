@@ -4,15 +4,18 @@ import logging
 import time
 import copy
 import argparse
+import numpy as np
 #
 import torch
-from torchvision import transforms
+from torchvision import transforms, models
 from torch.utils.data import DataLoader
+import torch.nn as nn
 
 # Project imports
 from .data import PascalDataset
-from .vis import show_grid
+from .vis import show_grid, plot_anchor_grid
 from .transforms import Rescale, ToTensor
+from .net import SSDHead
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Config
@@ -108,9 +111,56 @@ def train_model(device, dataloaders, dataset_sizes, model, criterion, optimizer,
     # load best model weights
     model.load_state_dict(best_model_wts)
     return model
+
+
+def hw2corners(ctr, hw):
+    return torch.cat([ctr-hw/2, ctr+hw/2], dim=1)
+
+
+def create_anchor(anc_grid=4, k=1):
+    """
+    Square anchor grid
+    :param anchor_grid_size:
+    :param k:
+    :return:
+    """
+    anc_offset = 1/(anc_grid*2)
+    anc_x = np.repeat(np.linspace(anc_offset, 1-anc_offset, anc_grid), anc_grid)
+    anc_y = np.tile(np.linspace(anc_offset, 1-anc_offset, anc_grid), anc_grid)
+
+    anc_ctrs = np.tile(np.stack([anc_x,anc_y], axis=1), (k,1))
+    anc_sizes = np.array([[1/anc_grid,1/anc_grid] for i in range(anc_grid*anc_grid)])
+    #
+    anchors = torch.from_numpy(np.concatenate([anc_ctrs, anc_sizes], axis=1)).float()
+    anchors.requires_grad = False
+    grid_sizes = torch.from_numpy(np.array([1/anc_grid])).unsqueeze(1)
+    grid_sizes.requires_grad = False
+
+    anchor_cnr = hw2corners(anchors[:,:2], anchors[:,2:])
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Steps
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+def children(m):
+    return m if isinstance(m, (list, tuple)) else list(m.children())
+
+
+def num_features(m):
+    c = children(m)
+    if len(c) == 0:
+        return None
+    for l in reversed(c):
+        if hasattr(l, 'num_features'):
+            return l.num_features
+        res = num_features(l)
+        if res is not None:
+            return res
+
+
+def one_hot_embedding(labels, num_classes):
+    return torch.eye(num_classes)[labels.data.cpu()]
 
 
 def main(imgdir, epochs, workers, visualize=False):
@@ -127,14 +177,14 @@ def main(imgdir, epochs, workers, visualize=False):
 
     # show_grid needs 12 items in the sample
     sample = [pascal_dataset[i] for i in range(12)]
-    show_grid(sample, file_name='original.png')
+    # show_grid(sample, file_name='original.png')
 
     # show some transformed images
     composed = transforms.Compose([Rescale(256),
                                    ])
 
     rescaled_sample = [composed(s) for s in sample]
-    show_grid(rescaled_sample, file_name='rescaled.png')
+    # show_grid(rescaled_sample, file_name='rescaled.png')
 
     # The transformation ToTensor reshapes the image to be used by PyTorch
     # TODO: Normalize(), Rotate(), Lighting(), Flip()
@@ -142,8 +192,52 @@ def main(imgdir, epochs, workers, visualize=False):
     transformed_dataset = PascalDataset(DATASET_ANNOTATION_JSON, IMAGE_ROOT_DIR, transform=transformations)
     dataloader = DataLoader(transformed_dataset, batch_size=64, shuffle=True, num_workers=4)
 
-    for batch_id, batch in enumerate(dataloader):
-       print(batch_id, batch['image'].size(), batch['scene'])
+    # for batch_id, batch in enumerate(dataloader):
+    #    print(batch_id, batch['image'].size(), batch['scene'])
+
+    create_anchor(4, 1)
+
+    # We add an additional class for the background
+    num_classes = len(pascal_dataset.categories) + 1
+
+    # WTF is k?
+    k = 1
+    n_act = k * (4 + num_classes)
+
+    log.info(f'Number of categories: {num_classes}')
+
+    # log.info(f'Number of data loader workers: {workers}')
+    # Load a pretrained model and configure all hyper parameters
+    log.info('Load a pretrained resnet34 model...')
+    resnet_model = models.resnet34(pretrained=True)
+    # model = models.resnet50(pretrained=True)
+
+    # Isolate the last 8 layers of resnet
+    resnet_layers = list(resnet_model.children())[:8]
+    ssd_layers = [SSDHead(k, -3.0, num_classes)]
+
+    # We need to convert to a model before we concatenate to resnet
+    ssd_head_model = nn.Sequential(*ssd_layers).to(device)
+    model = nn.Sequential(*(resnet_layers+ssd_layers)).to(device)
+
+
+
+
+    # TODO: Define the loss function
+    # log.info(f'Define a cross-entropy loss function')
+    # criterion = nn.CrossEntropyLoss()
+
+    # Optimizer
+    # log.info(f'Define a stochastic gradient descent optimizer with momentum')
+    # learning_rate = 0.001
+    # momentum = 0.9
+    # log.info(f'Learning rate: {learning_rate}')
+    # log.info(f'Momentum: {momentum}')
+    # # Note: Only the last layer parameters are getting optimized
+    # optimizer_conv = optim.SGD(model_conv.fc.parameters(), lr=learning_rate, momentum=momentum)
+
+
+    # ??? learn.opt_fn = optim.Adam
 
 
 

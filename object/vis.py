@@ -88,3 +88,10 @@ def show_grid(sample, file_name='plot.png'):
         show_ground_truth(ax, sample[i])
     plt.tight_layout()
     plt.savefig(file_name)
+
+
+def plot_anchor_grid(anc_x, anc_y):
+    plt.scatter(anc_x, anc_y)
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.savefig('grid.png')

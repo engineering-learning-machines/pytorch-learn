@@ -52,10 +52,11 @@ class PascalDataset(Dataset):
         # We call an item of this data set a scene, because it contains the image, as well as a
         # list of annotated objects with each of its category and a bounding box.
         with open(json_file, 'r') as fp:
-            self.scene_ids, self.scenes = self.parse_annotations(json.load(fp))
+            self.scene_ids, self.scenes, self.categories = self.parse_annotations(json.load(fp))
 
         self.image_root_dir = image_root_dir
         self.transform = transform
+
 
     @staticmethod
     def parse_annotations(metadata):
@@ -85,7 +86,7 @@ class PascalDataset(Dataset):
                 'category_name': categories[category_id],
                 'bounding_box': scene_object['bbox']
             })
-        return scene_ids, scenes
+        return scene_ids, scenes, categories
 
     def __len__(self):
         return len(self.scene_ids)
