@@ -23,5 +23,5 @@ Parameters:
 
 ### Result
 
-Accuracy:  
-Total Training Time:
+Accuracy: 0.989500
+Total Training Time: 35m 37s
