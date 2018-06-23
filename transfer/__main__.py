@@ -190,8 +190,10 @@ def main(imgdir, epochs, workers, visualize=False):
         visualize_training_data(dataloaders, class_names)
 
     # Load a pretrained model and configure all hyper parameters
-    log.info('Load a pretrained resnet34 model...')
-    model_conv = models.resnet34(pretrained=True)
+    # log.info('Load a pretrained resnet34 model...')
+    # model_conv = models.resnet34(pretrained=True)
+    log.info('Load a pretrained resnet50 model...')
+    model_conv = models.resnet50(pretrained=True)
 
     log.info('Freeze all existing layers')
     for param in model_conv.parameters():
